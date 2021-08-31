@@ -2,24 +2,26 @@
 Source and usage: https://github.com/kronius12/DU-screen-linesbox
 License: GNU Public License 3.0
 
-Writes lines of text and images on top of a filled box in a screen using Lua in Dual Universe (game). At its core, this uses the method:
+Writes lines of text and images on top of a filled box in a screen using Lua in Dual Universe (game).  The idea was, once you have the styles and box sorted out, you only need to worry about the text. See github for examples.
+
+At its core, it uses the method:
 
 ```lua
 writeTextArea(layer, image layer, content [, optional other parameters])
 ```
 
-This creates a column of text and images on a screen inside a box.
-Each line has text of a single style, an image, or both.
-Successive calls to writeTextArea() will create text
+This creates a column of text and images on a screen inside a box. Each line has text of a single style, an image, or both. Successive calls to writeTextArea() will create text
 boxes at specified positions and sizes.
 
-At its simplest, the user need only specify a list of text strings. See github for examples.
+At its simplest, the user need only provide text strings in a table.
+
+You're welcome to use freely. Donations in quanta (in-game currency) to Kronius.
 
 ![Image showing examples](doc/screenshot-1.png)
 
 # Usage
 
-_In the file_ `DU-screen-linesbox.lua` _the user-editable code is in 3 sections._
+_In the file_ [`DU-screen-linesbox.lua`](code/DU-screen-linesbox.lua) _the user-editable code is in 3 sections._
 
 ## Basic Example
 
@@ -130,3 +132,4 @@ backgroundColor = {16,16,60} -- screen background
 # To Do
 
 1. Error handling
+2. More examples
