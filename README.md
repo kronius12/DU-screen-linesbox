@@ -91,8 +91,9 @@ content={
 
 -- some defaults
 fontSizeDefault = 60         -- reduce this to fit more text
-defaultLineHeight = 1.0      -- a standard line is 1 line high, or use fontSizeDefault if you'd rather use pixels
+defaultLineHeight = 1.0      -- a standard line is 1 line high, or use fontSizeDefault if you'd rather work in pixels
 defaultTextAlign = "center"  -- text and images
+defaultPadding = 20          -- a little bit away from the edge
 backgroundColor = {16,16,60} -- screen background
 
 -- some styles

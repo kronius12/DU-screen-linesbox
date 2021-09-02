@@ -14,7 +14,6 @@
 local heading={
     {message="DU-screen-linesbox", style="heading" },
     {message="multi-column-example.lua", style="heading" },
-
     }
 
 local columns={}
@@ -51,18 +50,20 @@ local footer = {
 -- ***** 2) STYLE DEFS *****
 
 -- default parameters
-defaultFontSize = 40          -- reduce this to fit more text
-defaultLineHeight = 1.0       -- a standard line is 1 line high, or change to defaultFontSize if you'd rather use pixels
-defaultTextAlign = "center"   -- text and images
 backgroundColor = {80,80,20}  -- screen background
-defaultMargin = 30
+defaultFontSize = 40          -- reduce this to fit more text
+defaultLineHeight = 1.0       -- a standard line is 1 line high,
+                              -- or change to defaultFontSize if you'd rather work in pixels
+defaultPadding = 20           -- whitespace inside box
+defaultTextAlign = "center"   -- text and images
 
 local function getStyles()
+    -- you could use functions for various style sets
     -- you can edit, see documentation for available parameters
 
     local styles={}
 
-    -- must be fully specified
+    -- default must be fully specified
     styles.default={ 
         fontName="RobotoCondensed", 
         fontSize=defaultFontSize, 
@@ -96,8 +97,11 @@ local function getStyles()
     return styles
 end
 
--- ***** 3) CALL IT *****
+-- ***** 3) CALL IT ALL *****
 local function main()
+    local margin = 20
+    local padding = defaultPadding
+    
     local rx, ry = getResolution() -- Gets the resolution of the screen
     local boxLayer = createLayer()   -- Creates a new layer, index 1
     local imgLayer = createLayer()   -- Creates a layer on top of boxLayer
@@ -106,46 +110,72 @@ local function main()
     setBackgroundColor(normaliseRgb(backgroundColor))
     
     -- *** EDIT THIS ***
+    -- This works out the position of each text box as it goes
     local boxBackground = {0,48,120, 1}
+    
+    -- Total height of text
     local nHeadingLines = getLineCount(heading, styles)
     local nColLines = getLineCount(columns[1], styles) -- assume they're the same
     local nFooterLines = getLineCount(footer, styles)
     local totalLines = nHeadingLines + nColLines + nFooterLines
     
-    -- write heading
-    if #heading > 0 then
+    -- Total white space top, between boxes, and bottom
+    local totalMargins = margin * 2
+    if nHeadingLines > 0 then totalMargins = totalMargins + margin end -- after heading
+    if nColLines > 0 then totalMargins = totalMargins + margin end -- after text
+    
+    local totalPadding = 0
+    if nHeadingLines > 0 then totalPadding = totalPadding + padding * 2 end -- heading
+    if nColLines > 0 then totalPadding = totalPadding + padding * 2 end -- text
+    -- if nFooterLines > 0 then totalPadding = totalPadding + padding * 2 end -- footer no padding
+    
+    -- Total pitch
+    local textPitch = (ry - totalMargins - totalPadding) / totalLines    
+    local nextBoxTop=margin
+    local boxHeight=0
+
+    -- write heading in a box
+    if nHeadingLines > 0 then
+        boxHeight=nHeadingLines*textPitch + padding*2
         writeTextArea(textLayer, imgLayer, heading, styles, 
-            defaultMargin, defaultMargin, 
-            rx - 2*defaultMargin, ry*nHeadingLines/totalLines - defaultMargin, 
-            10, 0, 
+            margin, nextBoxTop, 
+            rx - 2*margin, boxHeight,
+            padding, padding, 
             boxLayer, boxBackground)
+        nextBoxTop = nextBoxTop + boxHeight + margin
     end
 
-    -- write columns
-    for i, content in ipairs(columns) do
-        local offset = rx*(i-1)/#columns + defaultMargin/2
-        local boxWidth = rx/#columns - defaultMargin
-        if i == 1 then 
-            offset = defaultMargin 
-            boxWidth = boxWidth - defaultMargin*0.5
-        end
-        if i == #columns then
-            boxWidth = boxWidth - defaultMargin*0.5
-        end
+    -- write columns in boxes
+    if nColLines > 0 then
+        boxHeight = nColLines*textPitch + padding*2
+        for i, content in ipairs(columns) do
+            local offset = rx*(i-1)/#columns + margin/2
+            local boxWidth = rx/#columns - margin
+            if i == 1 then 
+                offset = margin 
+                boxWidth = boxWidth - margin*0.5
+            end
+            if i == #columns then
+                boxWidth = boxWidth - margin*0.5
+            end
 
-        writeTextArea(textLayer, imgLayer, content, styles,
-            offset, ry*nHeadingLines/totalLines + defaultMargin, 
-            boxWidth, ry*nColLines/totalLines - defaultMargin, 
-            10, 0, 
-            boxLayer, boxBackground)
+            writeTextArea(textLayer, imgLayer, content, styles,
+                offset, nextBoxTop,
+                boxWidth, boxHeight,
+                padding, padding, 
+                boxLayer, boxBackground)
+        end
+        nextBoxTop = nextBoxTop + boxHeight + margin
     end
     
-    -- write footer
-    if #footer > 0 then
+    -- write footer no box
+    if nFooterLines > 0 then
+        boxHeight = nFooterLines*textPitch
         writeTextArea(textLayer, imgLayer, footer, styles,
-            0, ry*(nHeadingLines + nColLines)/totalLines,
-            rx, ry*nFooterLines/totalLines,        
-            10, 0)
+            0, nextBoxTop,
+            rx, boxHeight,
+            padding, 0)
+        nextBoxTop = nextBoxTop + boxHeight + margin
     end
 
     -- *** END OF EDIT THIS ***
@@ -161,13 +191,33 @@ function normaliseRgba(rgba) return rgba[1]/255,rgba[2]/255,rgba[3]/255, rgba[4]
 
 function getLineCount(content, styles)
     -- sums .lineHeight
-    local totalLines = defaultLineHeight -- half a line clear top and bottom
-    for i = 1, #content do
-        local style = content[i].style or defaultStyleName
-        local lineHeight = (content[i].lineHeight or (styles[style].lineHeight or defaultLineHeight))
-        totalLines = totalLines + lineHeight
+    local totalLines = 0 -- defaultLineHeight -- half a line clear top and bottom
+    if content then
+        for i, contentLine in ipairs(content) do
+            local style = content[i].style or defaultStyleName
+            local lineHeight = (content[i].lineHeight or ((styles[style] or styles[defaultStyleName]).lineHeight or defaultLineHeight))
+            totalLines = totalLines + lineHeight
+        end
     end
     return totalLines
+end
+
+local function getStyleProperties(contentLine, styles)
+        -- gets attributes defined nearest
+        local style = contentLine.style or defaultStyleName
+        local font=((styles[style] or styles[defaultStyleName]).font
+                or styles[defaultStyleName].font)
+        local textAlign=(contentLine.align 
+                or ((styles[style] or styles[defaultStyleName]).align 
+                or (styles[defaultStyleName].align or defaultTextAlign)))
+        local colorRgba=(contentLine.colorRgba 
+                or ((styles[style] or styles[defaultStyleName]).colorRgba 
+                or (styles[defaultStyleName].colorRgba or {255,255,255,1.0})))
+        local lineHeight=(contentLine.lineHeight 
+                or ((styles[style] or styles[defaultStyleName]).lineHeight 
+                or (styles[defaultStyleName].lineHeight or defaultLineHeight)))
+
+        return style, font, textAlign, colorRgba, lineHeight
 end
 
 local function getBoxProperties(totalLines, xPos, yPos, width, height)
@@ -199,7 +249,7 @@ local function getTextAreaProperties(totalLines, paddingX, paddingY, box)
     return textArea
 end
 
-local function getImageProperties(content, line, lineHeight, textArea, align)
+local function getImageProperties(content, lineTopEdge, lineHeight, textArea, align)
 
     local img = {}
     local aspect = 1.0 -- API doesn't inspect img so work it out
@@ -239,7 +289,7 @@ local function getImageProperties(content, line, lineHeight, textArea, align)
     else
         imgX = textArea.centerPos - img.width/2 -- centred
     end
-    local imgY = textArea.yPos + line*textArea.verticalPitch -- immediately below previous line
+    local imgY = textArea.yPos + lineTopEdge*textArea.verticalPitch -- immediately below previous line
     img.posX = content.imgPosX or imgX
     img.posY = content.imgPosY or imgY
 
@@ -260,7 +310,6 @@ local function drawBox(boxLayer, box)
     return boxDrawn 
 end
 
-
 function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width, height, paddingX, paddingY, boxLayer, boxBackgroundRgba)
     -- see documentation for parameters    
 
@@ -280,24 +329,21 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
     end
 
     -- loop over content lines
-    local line = defaultLineHeight / 2 -- top of next line; start half a line down from top
+    local lineTopEdge = 0 -- top of next line
     for i = 1, #contentLines do
 
         -- *** write one line of text or image ***
 
-        -- style attributes
-        local style = contentLines[i].style or defaultStyleName
-        local font=styles[style].font or styles[defaultStyleName].font
-        local textAlign=(contentLines[i].align or (styles[style].align or (styles[defaultStyleName].align or defaultTextAlign)))
-        local colorRgba=(contentLines[i].colorRgba or (styles[style].colorRgba or (styles[defaultStyleName].colorRgba or {255,255,255,1.0})))
-        local lineHeight=(contentLines[i].lineHeight or (styles[style].lineHeight or (styles[defaultStyleName].lineHeight or defaultLineHeight)))
+        -- get style attributes
+        local style, font, textAlign, colorRgba, lineHeight 
+            = getStyleProperties(contentLines[i], styles)
 
         -- next line y pos
-        local lineYpos = textArea.yPos + (line + lineHeight/2) * textArea.verticalPitch -- middle of item
+        local lineYpos = textArea.yPos + (lineTopEdge + lineHeight/2) * textArea.verticalPitch -- middle of item
         
         -- write text and image to screen
         if contentLines[i].imgPath then
-            local img = getImageProperties(contentLines[i], line, lineHeight, textArea, textAlign)
+            local img = getImageProperties(contentLines[i], lineTopEdge, lineHeight, textArea, textAlign)
             image = loadImage(contentLines[i].imgPath)
             addImage(imgLayer,image,img.posX,img.posY,img.width,img.height)
         end
@@ -316,7 +362,7 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
         end
         
         -- next line
-        line = line + lineHeight
+        lineTopEdge = lineTopEdge + lineHeight
 
     end
 
