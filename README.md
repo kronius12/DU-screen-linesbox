@@ -4,6 +4,8 @@ License: GNU Public License 3.0
 
 Writes lines of text and images on top of a filled box in a screen using Lua in Dual Universe (game).  The idea was, once you have the styles and box sorted out, you only need to worry about the text. See github for examples.
 
+At its simplest, the user need only provide text strings in a table.
+
 At its core, it uses the method:
 
 ```lua
@@ -12,8 +14,6 @@ writeTextArea(layer, image layer, content [, optional other parameters])
 
 This creates a column of text and images on a screen inside a box. Each line has text of a single style, an image, or both. Successive calls to writeTextArea() will create text
 boxes at specified positions and sizes.
-
-At its simplest, the user need only provide text strings in a table.
 
 You're welcome to use freely. Donations in quanta (in-game currency) to Kronius.
 
