@@ -9,7 +9,7 @@ At its simplest, the user need only provide text strings in a table.
 At its core, it uses the method:
 
 ```lua
-writeTextArea(layer, image layer, content [, optional other parameters])
+writeTextArea(layer, image layer, content [, other parameters see below])
 ```
 
 This creates a column of text and images on a screen inside a box. Each line has text of a single style, an image, or both. Successive calls to writeTextArea() will create text
@@ -21,7 +21,7 @@ You're welcome to use freely. Donations in quanta (in-game currency) to Kronius.
 
 # Usage
 
-_In the file_ [`DU-screen-linesbox.lua`](code/DU-screen-linesbox.lua) _the user-editable code is in 3 sections._
+_In the file_ [`lua/DU-screen-linesbox.lua`](lua/DU-screen-linesbox.lua) _the user-editable code is in 3 sections. That is followed by methods that lay out the specified content._
 
 ## Basic Example
 
@@ -39,7 +39,11 @@ _You need do nothing else if you're happy with the styles provided, and no box._
 
 **1) Edit the content table,** which is a table where each line of text and/or an image is itself represented by a table.
 
-Include at least one of the following for each line:
+Provide the following as a table:
+*  `.boxBackgroundColor` (optional) = background colour of the box
+*  `contentLine, contentLine, ...` = content, each a table representing a line of text, an image, or both
+
+Where `contentLine` is a table with these elements, all optional:
 
 *  `.message` = one line of text of one style
 *  `.imgPath` = relative path URL to a NQ approved image or local resource
@@ -49,7 +53,7 @@ Include at least one of the following for each line:
 *  `.lineHeight` = relative vertical distance from line above, or image height in lines; a "line" is defined by lineHeightDefault so can be in pixels, as pitch is adjusted accordingly; text is middle aligned vertically within the line, and lines a vertically justified.
 *  `.imgPosX`, `.imgPosY` (both or none) = absolute top left pos of image relative to text box;
      image is centred and starts just below the line above if no pos given.
-*  .imgWidth, .imgHeight (both or none) = size (for aspect ratio if no pos); aspect ratio defaults to 1.0 if either height or width are missing;
+*  `.imgWidth`, `.imgHeight` (both or none) = size (for aspect ratio if no pos); aspect ratio defaults to 1.0 if either height or width are missing;
 
   Images scale to fit .lineHeight if no pos given, keeping aspect ratio, and any text will write on top, middle aligned on the image. NQ recommends not relying on this order, so image layer and optional box layer are input parameters.
   
@@ -67,7 +71,7 @@ Example styles are given that might be used for simple signs.
 
 N.B. do not exceed the screen API limit of 8 font name/size combos.
 
-**3) Optionally edit the call to `writeTextArea()`,** to specify the text area background box dimensions/location and content.
+**3) Optionally edit the call to `writeTextArea()`,** to specify the text area background box dimensions/location and content. This function has the following parameters:
 
 * `layer` = text layer id (mandatory)
 * `imgLayer` = image layer id (mandatory, should differ from layer)
@@ -78,10 +82,9 @@ N.B. do not exceed the screen API limit of 8 font name/size combos.
 * `paddingX`, `paddingY` = padding inside the box; user must size text to fit width
 * `boxLayer`, `boxBackgroundRgba` = box layer and colour
 
-## Another Example
+## A longer Example
 
 ```lua
-
 -- what to write
 content={
     {"A Heading", style="heading"},
@@ -124,8 +127,11 @@ backgroundColor = {16,16,60} -- screen background
 ...
 ```
 
+An advanced example is in `lua/examples/multi-column-example.lua` where all three sections are modified to specify header (displayed in a box), content (multiple boxes across) and footer (no box).
+
 # Limitations
 
+* Doesn't word-wrap
 * One line one style
 * Top/bottom or left/right padding are same
 * You create margins by positioning the box

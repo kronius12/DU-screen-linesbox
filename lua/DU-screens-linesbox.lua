@@ -1,7 +1,7 @@
 -- # DU-screen-linesbox
 -- Source and usage: https://github.com/kronius12/DU-screen-linesbox
 -- License: GNU Public License 3.0
--- Version 1.0.0
+-- Version 1.0.2
 --
 -- This creates a column of text and images on-screen inside a box.
 -- Each line has text of a single style, an image, or both.
@@ -9,6 +9,8 @@
 -- boxes at specified positions and sizes.
 --
 -- At its simplest you only need to edit the messages.
+--
+-- Donations in-game to Kronius welcome but not required.
 
 -- ***** 1) EDIT CONTENT HERE *****
 -- See github README.md for parameters.
@@ -25,17 +27,20 @@ local content= {
 {message="/DU-screen-linesbox", style="orange"},
 }
 
--- ***** 2) STYLE DEFS *****
+-- ***** 2) EDIT STYLE DEFS HERE *****
 
--- default parameters
+-- default parameters - you need these
+backgroundColor = {16,16,80}  -- screen background
 defaultFontSize = 40          -- reduce this to fit more text
 defaultLineHeight = 1.0       -- a standard line is 1 line high,
                               -- or change to defaultFontSize if you'd rather work in pixels
-defaultTextAlign = "center"   -- text and images
 defaultPadding = 20           -- whitespace inside box
-backgroundColor = {16,16,80}  -- screen background
+defaultAspectRatio = 1.0      -- 1.0 for in-game icons; 1920/1080 for 16:9 landscape 
+defaultTextAlign = "center"   -- text and images
 
--- you can edit, see documentation for available parameters
+local function getStyles()
+    -- you could craft multiple functions to create various style sets
+    -- you can edit, see documentation for available parameters
 
     local styles={}
 
@@ -67,14 +72,16 @@ backgroundColor = {16,16,80}  -- screen background
     styles.indigo={colorRgba={64,0,128,1.0}}
     styles.violet={colorRgba={149,0,179,1.0}}
 
+    return styles
+end
 
--- ***** 3) CALL IT *****
+-- ***** 3) EDIT HERE WHAT IT DOES *****
 local function main()
     local rx, ry = getResolution() -- Gets the resolution of the screen
     local boxLayer = createLayer()   -- Creates a layer at the back
     local imgLayer = createLayer()   -- Creates a layer on top of boxLayer
     local textLayer = createLayer()  -- Creates a layer on top of boxLayer and imgLayer
---    local styles = getStyles()       -- Table of styles for this text
+    local styles = getStyles()       -- Table of styles for this text
     setBackgroundColor(normaliseRgb(backgroundColor))
 
     -- *** EDIT THIS ***
@@ -85,8 +92,8 @@ local function main()
         20, 20,
         boxLayer, {30, 30, 100, 1.0})
 
-    -- *** END OF USER EDITABLE SECTION ***
 end
+-- *** END OF USER EDITABLE SECTION ***
 
 -- ***** WORKINGS *****
 defaultStyleName = "default" -- option to set a different default
@@ -95,7 +102,6 @@ defaultStyleName = "default" -- option to set a different default
 function normaliseRgb(rgb)   return rgb[1]/255, rgb[2]/255, rgb[3]/255 end
 function normaliseRgba(rgba) return rgba[1]/255,rgba[2]/255,rgba[3]/255, rgba[4] end
 
-
 function getLineCount(content, styles)
     -- sums .lineHeight
     local totalLines = 0 -- defaultLineHeight -- half a line clear top and bottom
@@ -103,6 +109,13 @@ function getLineCount(content, styles)
         for i, contentLine in ipairs(content) do
             local style = content[i].style or defaultStyleName
             local lineHeight = (content[i].lineHeight or ((styles[style] or styles[defaultStyleName]).lineHeight or defaultLineHeight))
+            if not contentLine.style 
+                and not contentLine.message 
+                and not contentLine.lineHeight
+                and not contentLine.imgPath
+            then
+                lineHeight = 0
+            end
             totalLines = totalLines + lineHeight
         end
     end
@@ -110,21 +123,29 @@ function getLineCount(content, styles)
 end
 
 local function getStyleProperties(contentLine, styles)
-        -- gets attributes defined nearest
-        local style = contentLine.style or defaultStyleName
-        local font=((styles[style] or styles[defaultStyleName]).font
-                or styles[defaultStyleName].font)
-        local textAlign=(contentLine.align 
-                or ((styles[style] or styles[defaultStyleName]).align 
-                or (styles[defaultStyleName].align or defaultTextAlign)))
-        local colorRgba=(contentLine.colorRgba 
-                or ((styles[style] or styles[defaultStyleName]).colorRgba 
-                or (styles[defaultStyleName].colorRgba or {255,255,255,1.0})))
-        local lineHeight=(contentLine.lineHeight 
-                or ((styles[style] or styles[defaultStyleName]).lineHeight 
-                or (styles[defaultStyleName].lineHeight or defaultLineHeight)))
+    -- gets attributes defined nearest
+    local style = contentLine.style or defaultStyleName
+    local font=((styles[style] or styles[defaultStyleName]).font
+            or styles[defaultStyleName].font)
+    local textAlign=(contentLine.align 
+            or ((styles[style] or styles[defaultStyleName]).align 
+            or (styles[defaultStyleName].align or defaultTextAlign)))
+    local colorRgba=(contentLine.colorRgba 
+            or ((styles[style] or styles[defaultStyleName]).colorRgba 
+            or (styles[defaultStyleName].colorRgba or {255,255,255,1.0})))
+    local lineHeight=(contentLine.lineHeight 
+            or ((styles[style] or styles[defaultStyleName]).lineHeight 
+            or (styles[defaultStyleName].lineHeight or defaultLineHeight)))
+    if not contentLine.style 
+        and not contentLine.message 
+        and not contentLine.lineHeight
+        and not contentLine.style
+        and not contentLine.imgPath
+    then
+        lineHeight = 0
+    end
 
-        return style, font, textAlign, colorRgba, lineHeight
+    return style, font, textAlign, colorRgba, lineHeight
 end
 
 local function getBoxProperties(totalLines, xPos, yPos, width, height)
@@ -156,14 +177,16 @@ local function getTextAreaProperties(totalLines, paddingX, paddingY, box)
     return textArea
 end
 
-local function getImageProperties(content, lineTopEdge, lineHeight, textArea, align)
+local function getImageProperties(content, 
+        lineTopEdge, lineHeight, textArea, align)
 
     local img = {}
-    local aspect = 1.0 -- API doesn't inspect img so work it out
-    local imgAspectWidth = (content.width or 0)
-    local imgAspectHeight = (content.height or 0)
+    -- API doesn't inspect img so have to be given aspect ratio
+    local aspect = (defaultAspectRatio or 1.0) 
+    local imgAspectWidth = (content.imgWidth or 0)
+    local imgAspectHeight = (content.imgHeight or 0)
     if imgAspectWidth > 0 and imgAspectHeight > 0 then
-        aspect = content.imgAspectWidth / content[i].imgAspectHeight
+        aspect = imgAspectWidth / imgAspectHeight
     end
     img.aspect = aspect
 
@@ -176,10 +199,12 @@ local function getImageProperties(content, lineTopEdge, lineHeight, textArea, al
     end
 
     -- image dimensions
-    if content.imgPosX and content.imgPosY then
+    imgPosX = (content.imgPosX or 0)
+    imgPosY = (content.imgPosY or 0)
+    if imgPosX>0 and imgPosY>0 then
         -- absolute position, so use absolute size if given
-        img.width = content.width or imgLineWidth
-        img.height = content.height or imgLineHeight
+        img.width = content.imgWidth or imgLineWidth
+        img.height = content.imgHeight or imgLineHeight
     else
         -- scale to line height 
         img.width = imgLineWidth
@@ -217,7 +242,7 @@ local function drawBox(boxLayer, box)
     return boxDrawn 
 end
 
-function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width, height, paddingX, paddingY, boxLayer, boxBackgroundRgba)
+function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width, height, paddingX, paddingY, boxLayer, boxBackgroundColor)
     -- see documentation for parameters    
 
     -- get line total from content
@@ -230,9 +255,11 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
     local textArea = getTextAreaProperties(totalLines, paddingX, paddingY, box)
 
     -- *** draw background box ***
-    if boxLayer then
-        box.boxBackgroundColor = boxBackgroundRgba or {}
-        drawBox(boxLayer, box)
+    
+    if boxLayer or boxBackgroundColor or contentLines.boxBackgroundColor then
+        local boxLayerUsed = (boxLayer or layer)
+        box.boxBackgroundColor = boxBackgroundColor or (contentLines.boxBackgroundColor or boxBackgroundDefault)
+        drawBox(boxLayerUsed, box)
     end
 
     -- loop over content lines
@@ -276,3 +303,4 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
 end 
 
 main()
+
