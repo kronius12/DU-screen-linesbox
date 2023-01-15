@@ -1,7 +1,7 @@
 -- # DU-screen-linesbox
 -- Source and usage: https://github.com/kronius12/DU-screen-linesbox
 -- License: GNU Public License 3.0
--- Version 1.0.2
+-- Version 1.1.0
 --
 -- This example creates columns of text and images inside boxes with margins.
 -- You specify header (displayed in a box), content (multiple boxes across)
@@ -11,42 +11,52 @@
 -- Donations in-game to Kronius welcome but not required.
 
 -- ***** 1) EDIT CONTENT HERE *****
--- see documentation for parameters
 -- pick from the styles defined in (2) below
--- example table of messages and their styles
+-- example tables of messages and their styles are given
 
 local header={
     {message="DU-screen-linesbox", style="heading" },
     {message="multi-column-example.lua", style="heading" },
     }
 header.boxBackgroundColor = {48,48,48, 1.0}
+header.boxRadiusLines = 2
 
 local columns={}
 local imgHeight = 2.5
+local imgPath = "resources_generated/elements/engines/engine-atmospheric-vertical-booster_001_m/icons/env_engine-atmospheric-vertical-booster_001_m_icon.png"
 
 table.insert(columns, {
-    {message="?", style="elementHeading", lineHeight = 1 },
+    {message="Some text", style="elementHeading", lineHeight = 1 },
     {lineHeight = 0.4 },
-    {imgPath="resources_generated/iconsLib/elementslib/coreunitstatic256.png", lineHeight = imgHeight-0.8},
+    {imgPath=imgPath, lineHeight = imgHeight-0.8},
     {lineHeight = 0.4 },
-    {message="???h", style="element", lineHeight = 1 },
+    {message="More text", style="element", lineHeight = 1 },
     })
 
+imgHeight = 2.2
+imgOffsetY = 0.7
 table.insert(columns, {
-    {message="?", style="elementHeading", lineHeight = 1 },
+    {lineHeight=imgOffsetY},
+    {imgPath=imgPath, lineHeight=imgHeight, align="left"},
+    {lineHeight=-imgHeight},
+    {imgPath=imgPath, lineHeight=imgHeight, align="right"},
+    {lineHeight=-imgHeight-imgOffsetY},
+        
+    {message="Example", style="elementHeading", lineHeight = 1 },
     {lineHeight = 0.2 },
-    {message="OUT OF STOCK", style="red",
-        imgPath="resources_generated/iconsLib/elementslib/coreunitstatic256.png", lineHeight = imgHeight-0.4},
+    {message="STYLED TEXT", style="red"},
     {lineHeight = 0.2 },
-    {message="???h", style="element", lineHeight = 1 },
+    {message="over an image", style="element", lineHeight = 1 },
     })
 columns[#columns].boxBackgroundColor = {0,48,20, 0.8}
+columns[#columns].boxRadius = 40
 
 table.insert(columns, {
     {message="?", style="elementHeading", lineHeight = 1 },
     {imgPath="resources_generated/iconsLib/elementslib/coreunitstatic256.png", lineHeight = imgHeight},
-    {message="???h", style="element", lineHeight = 1 },
+    {message="1,000ħ", style="element", lineHeight = 1 },
     })
+columns[#columns].boxRadiusLines = 4
 
 local footer = {
 {message="Source and usage: ", style="details"},
@@ -63,6 +73,7 @@ defaultFontSize = 40          -- reduce this to fit more text
 defaultLineHeight = 1.0       -- a standard line is 1 line high,
     -- or change to defaultFontSize if you'd rather work in pixels
 defaultPadding = 20           -- whitespace inside box
+defaultBoxRadius = 10
 defaultAspectRatio = 1.0      -- 1.0 for in-game icons; 1920/1080 for 16:9 landscape 
 defaultTextAlign = "center"   -- text and images
 
@@ -110,6 +121,7 @@ end
 -- ***** 3) EDIT HERE WHAT IT DOES *****
 -- This example takes tables of messages as header and footer, and
 -- a table of tables containing messages to go in columns in the middle.
+
 local function main()
     local margin = 20
     local padding = defaultPadding
@@ -134,12 +146,12 @@ local function main()
     local totalMargins = margin * 2
     if nHeadingLines > 0 then totalMargins = totalMargins + margin end -- after header
     if nColLines > 0 then totalMargins = totalMargins + margin end -- after text
-    
+
     local totalPadding = 0
     if nHeadingLines > 0 then totalPadding = totalPadding + padding * 2 end -- header
     if nColLines > 0 then totalPadding = totalPadding + padding * 2 end -- text
     -- if nFooterLines > 0 then totalPadding = totalPadding + padding * 2 end -- footer no padding
-    
+
     -- Total pitch
     local textPitch = (ry - totalMargins - totalPadding) / totalLines    
     local nextBoxTop=margin
@@ -149,12 +161,13 @@ local function main()
     if nHeadingLines > 0 then
         boxHeight=nHeadingLines*textPitch + padding*2
         local boxBackground = (header.boxBackgroundColor or (boxBackgroundDefault or backgroundColor))
+        local boxRadius = header.boxRadius or ((header.boxRadiusLines or 0) * defaultFontSize)
 
         writeTextArea(textLayer, imgLayer, header, styles, 
             margin, nextBoxTop, 
             rx - 2*margin, boxHeight,
             padding, padding, 
-            boxLayer, boxBackground)
+            boxLayer, boxBackground, boxRadius)
         nextBoxTop = nextBoxTop + boxHeight + margin
     end
 
@@ -177,7 +190,7 @@ local function main()
                 offset, nextBoxTop,
                 boxWidth, boxHeight,
                 padding, padding, 
-                boxLayer, boxBackground)
+                boxLayer) -- box bkg & radius optional example
         end
         nextBoxTop = nextBoxTop + boxHeight + margin
     end
@@ -238,7 +251,6 @@ local function getStyleProperties(contentLine, styles)
     if not contentLine.style 
         and not contentLine.message 
         and not contentLine.lineHeight
-        and not contentLine.style
         and not contentLine.imgPath
     then
         lineHeight = 0
@@ -247,14 +259,26 @@ local function getStyleProperties(contentLine, styles)
     return style, font, textAlign, colorRgba, lineHeight
 end
 
-local function getBoxProperties(totalLines, xPos, yPos, width, height)
+local function getBoxRadius(c)
+    local r=defaultBoxRadius or 0
+    if c then
+        if c.boxRadius then r = c.boxRadius
+        elseif c.boxRadiusLines then r = c.boxRadiusLines * defaultFontSize
+        else r = defaultBoxRadius or 0
+        end 
+    end
+    return r
+end
+
+local function getBoxProperties(totalLines, xPos, yPos, w, h, r)
     -- determines box dimensions and centreline
     local boxProperties = {}
     local rx, ry = getResolution() -- Gets the resolution of the screen
     boxProperties.boxXpos = (xPos or 0)
     boxProperties.boxYpos = (yPos or 0)
-    boxProperties.boxW = (width or (rx - (xPos or 0)))
-    boxProperties.boxH = (height or (ry - (yPos or 0)))
+    boxProperties.boxW = (w or (rx - (xPos or 0)))
+    boxProperties.boxH = (h or (ry - (yPos or 0)))
+    boxProperties.boxRadius = (r or 0)
     return boxProperties
 
 end
@@ -335,29 +359,35 @@ local function drawBox(boxLayer, box)
     if #boxBackgroundRgba == 3 then table.insert(boxBackgroundRgba, 1.0) end
     if boxLayer and #boxBackgroundRgba == 4 then 
         setNextFillColor(boxLayer, normaliseRgba(boxBackgroundRgba) )
-        addBox(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH)
+        if (box.boxRadius or 0) > 0 then
+            addBoxRounded(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH, box.boxRadius)
+        else
+            addBox(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH)
+        end
         boxDrawn = true
     end
-    return boxDrawn 
+    return boxDrawn
 end
 
-function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width, height, paddingX, paddingY, boxLayer, boxBackgroundColor)
+function writeTextArea(layer, imgLayer, contentLines, styles,
+            xPos, yPos, width, height, paddingX, paddingY,
+            boxLayer, boxBackgroundColor, boxRadius)
     -- see documentation for parameters    
+    local rx, ry = getResolution() -- screen res
 
     -- get line total from content
     local totalLines = getLineCount(contentLines, styles)
     
     -- set text area parameters
-    local rx, ry = getResolution() -- Gets the resolution of the screen
-
-    local box = getBoxProperties(totalLines, xPos, yPos, width, height)
+    local box = getBoxProperties(totalLines, xPos, yPos, width, height, boxRadius)
     local textArea = getTextAreaProperties(totalLines, paddingX, paddingY, box)
 
     -- *** draw background box ***
     
     if boxLayer or boxBackgroundColor or contentLines.boxBackgroundColor then
         local boxLayerUsed = (boxLayer or layer)
-        box.boxBackgroundColor = boxBackgroundColor or (contentLines.boxBackgroundColor or boxBackgroundDefault)
+        box.boxBackgroundColor = boxBackgroundColor or contentLines.boxBackgroundColor or boxBackgroundDefault or backgroundColor
+        box.boxRadius = getBoxRadius(contentLines)
         drawBox(boxLayerUsed, box)
     end
 
@@ -402,4 +432,3 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
 end 
 
 main()
-

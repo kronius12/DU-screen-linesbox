@@ -1,7 +1,7 @@
 -- # DU-screen-linesbox
 -- Source and usage: https://github.com/kronius12/DU-screen-linesbox
 -- License: GNU Public License 3.0
--- Version 1.0.2
+-- Version 1.1.0
 --
 -- This creates a column of text and images on-screen inside a box.
 -- Each line has text of a single style, an image, or both.
@@ -20,7 +20,7 @@ local content= {
 {message=".lua", style="heading" },
 {message="Lets you create"},
 {message="Styled text over images", style="cyan", lineHeight = 3,
-     imgPath="resources_generated/iconsLib/elementslib/coreunitstatic256.png"},
+     imgPath="resources_generated/elements/engines/engine-atmospheric-vertical-booster_001_m/icons/env_engine-atmospheric-vertical-booster_001_m_icon.png"},
 {message="within boxes"},
 {message="Source and usage: ", style="cyan"},
 {message="https://github.com/kronius12", style="orange"},
@@ -139,7 +139,6 @@ local function getStyleProperties(contentLine, styles)
     if not contentLine.style 
         and not contentLine.message 
         and not contentLine.lineHeight
-        and not contentLine.style
         and not contentLine.imgPath
     then
         lineHeight = 0
@@ -148,14 +147,26 @@ local function getStyleProperties(contentLine, styles)
     return style, font, textAlign, colorRgba, lineHeight
 end
 
-local function getBoxProperties(totalLines, xPos, yPos, width, height)
+local function getBoxRadius(c)
+    local r=defaultBoxRadius or 0
+    if c then
+        if c.boxRadius then r = c.boxRadius
+        elseif c.boxRadiusLines then r = c.boxRadiusLines * defaultFontSize
+        else r = defaultBoxRadius or 0
+        end 
+    end
+    return r
+end
+
+local function getBoxProperties(totalLines, xPos, yPos, w, h, r)
     -- determines box dimensions and centreline
     local boxProperties = {}
     local rx, ry = getResolution() -- Gets the resolution of the screen
     boxProperties.boxXpos = (xPos or 0)
     boxProperties.boxYpos = (yPos or 0)
-    boxProperties.boxW = (width or (rx - (xPos or 0)))
-    boxProperties.boxH = (height or (ry - (yPos or 0)))
+    boxProperties.boxW = (w or (rx - (xPos or 0)))
+    boxProperties.boxH = (h or (ry - (yPos or 0)))
+    boxProperties.boxRadius = (r or 0)
     return boxProperties
 
 end
@@ -236,29 +247,35 @@ local function drawBox(boxLayer, box)
     if #boxBackgroundRgba == 3 then table.insert(boxBackgroundRgba, 1.0) end
     if boxLayer and #boxBackgroundRgba == 4 then 
         setNextFillColor(boxLayer, normaliseRgba(boxBackgroundRgba) )
-        addBox(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH)
+        if (box.boxRadius or 0) > 0 then
+            addBoxRounded(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH, box.boxRadius)
+        else
+            addBox(boxLayer, box.boxXpos, box.boxYpos, box.boxW, box.boxH)
+        end
         boxDrawn = true
     end
-    return boxDrawn 
+    return boxDrawn
 end
 
-function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width, height, paddingX, paddingY, boxLayer, boxBackgroundColor)
+function writeTextArea(layer, imgLayer, contentLines, styles,
+            xPos, yPos, width, height, paddingX, paddingY,
+            boxLayer, boxBackgroundColor, boxRadius)
     -- see documentation for parameters    
+    local rx, ry = getResolution() -- screen res
 
     -- get line total from content
     local totalLines = getLineCount(contentLines, styles)
     
     -- set text area parameters
-    local rx, ry = getResolution() -- Gets the resolution of the screen
-
-    local box = getBoxProperties(totalLines, xPos, yPos, width, height)
+    local box = getBoxProperties(totalLines, xPos, yPos, width, height, boxRadius)
     local textArea = getTextAreaProperties(totalLines, paddingX, paddingY, box)
 
     -- *** draw background box ***
     
     if boxLayer or boxBackgroundColor or contentLines.boxBackgroundColor then
         local boxLayerUsed = (boxLayer or layer)
-        box.boxBackgroundColor = boxBackgroundColor or (contentLines.boxBackgroundColor or boxBackgroundDefault)
+        box.boxBackgroundColor = boxBackgroundColor or contentLines.boxBackgroundColor or boxBackgroundDefault or backgroundColor
+        box.boxRadius = getBoxRadius(contentLines)
         drawBox(boxLayerUsed, box)
     end
 
@@ -303,4 +320,3 @@ function writeTextArea(layer, imgLayer, contentLines, styles, xPos, yPos, width,
 end 
 
 main()
-

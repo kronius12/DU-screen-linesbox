@@ -1,6 +1,7 @@
 # DU-screen-linesbox
 Source and usage: https://github.com/kronius12/DU-screen-linesbox
 License: GNU Public License 3.0
+Version: 1.1.0
 
 Writes lines of text and images on top of a filled box in a screen using Lua in Dual Universe (game).  The idea was, once you have the styles and box sorted out, you only need to worry about the text. See github for examples.
 
@@ -39,25 +40,27 @@ _You need do nothing else if you're happy with the styles provided, and no box._
 
 **1) Edit the content table,** which is a table where each line of text and/or an image is itself represented by a table.
 
-Provide the following as a table:
-*  `.boxBackgroundColor` (optional) = background colour of the box
-*  `contentLine, contentLine, ...` = content, each a table representing a line of text, an image, or both
+Provide the following as a table `t`:
+*  `t.boxBackgroundColor` (optional) = background colour of the box
+*  `t.boxRadiusLines` (optional) = corner radius in multiples of default font size
+*  `t.boxRadius` (optional) = corner radius in pixels, overriding `.boxRadiusLines`
+*  `t = {contentLine, contentLine, ...}` = content to display, each a table representing a line of text, an image, both, or white space
 
-Where `contentLine` is a table with these elements, all optional:
+Where `contentLine` is itself a table `c` with these elements, all optional:
 
-*  `.message` = one line of text of one style
-*  `.imgPath` = relative path URL to a NQ approved image or local resource
-*  `.align` = text alignment, either "left", "right or "center" (default)
-*  `.colorRgba` = text colour RGB in [0..255] eg. {255,255,255,1.0} is white
-*  `.style` = name of style
-*  `.lineHeight` = relative vertical distance from line above, or image height in lines; a "line" is defined by lineHeightDefault so can be in pixels, as pitch is adjusted accordingly; text is middle aligned vertically within the line, and lines a vertically justified.
-*  `.imgPosX`, `.imgPosY` (both or none) = absolute top left pos of image relative to text box;
+*  `c.message` = one line of text of one style
+*  `c.imgPath` = relative path URL to a NQ approved image or local resource
+*  `c.align` = text alignment, either "left", "right or "center" (default)
+*  `c.colorRgba` = text colour RGB in [0..255] eg. {255,255,255,1.0} is white
+*  `c.style` = name of style
+*  `c.lineHeight` = relative vertical distance from line above, or image height in lines; a "line" is defined by lineHeightDefault so can be in pixels, as pitch is adjusted accordingly; text is middle aligned vertically within the line, and lines a vertically justified.
+*  `c.imgPosX`, `c.imgPosY` (both or none) = absolute top left pos of image relative to text box;
      image is centred and starts just below the line above if no pos given.
-*  `.imgWidth`, `.imgHeight` (both or none) = size (for aspect ratio if no pos); aspect ratio defaults to 1.0 if either height or width are missing;
+*  `c.imgWidth`, `c.imgHeight` (both or none) = size (for aspect ratio if no pos); aspect ratio defaults to 1.0 if either height or width are missing;
 
   Images scale to fit .lineHeight if no pos given, keeping aspect ratio, and any text will write on top, middle aligned on the image. NQ recommends not relying on this order, so image layer and optional box layer are input parameters.
   
-  It is possible to specify a negative .lineHeight with no message or image, followed by a tall image, to create interesting effects such as an image behind multiple lines of text.
+  It is possible to specify a negative .lineHeight with no message or image, followed by one with a tall image, to create interesting effects such as an image behind multiple lines of text.
 
 **2) Optionally edit the styles.** The following elements are optional, but
 one fully-specified `default` style must be given. Where an attribute is not defined, the default value is used.
@@ -81,6 +84,7 @@ N.B. do not exceed the screen API limit of 8 font name/size combos.
 * `width`, `height` = box width & height
 * `paddingX`, `paddingY` = padding inside the box; user must size text to fit width
 * `boxLayer`, `boxBackgroundRgba` = box layer and colour
+* `boxRadius` = corner radius in pixels
 
 ## A longer Example
 
